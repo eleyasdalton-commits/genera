@@ -1,0 +1,49 @@
+name: Build Android APK
+
+# Runs automatically every time you push code to GitHub, and can also be
+# triggered manually from the "Actions" tab ("Run workflow" button).
+# The finished .apk appears under the workflow run's "Artifacts" section —
+# no computer, no Android Studio, no Flutter install needed on your side.
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Java (required by the Android build tools)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+
+      - name: Fill in missing Android platform files
+        # This project ships with custom android/app/src/main files
+        # (manifest, widget provider, layouts) already in place. This
+        # command fills in everything else a Flutter Android project
+        # needs (gradlew, build.gradle, settings.gradle, MainActivity...)
+        # WITHOUT touching files that already exist.
+        run: flutter create --platforms=android .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskflow-ai-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
